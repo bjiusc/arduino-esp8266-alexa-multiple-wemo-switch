@@ -1,6 +1,6 @@
 [9/7]
-This repository is forked from kakopappa's original "esp8266-alexa-multiple-wemo-switch" repository. I've customized this code to allow for a web-browser based control of each relay through the [ipaddress]/master web page, as well as support for a external on/off switch that can be attached to a pushbutton to manually control each relay. There is also a SPI LCD library integrated, which shows the current IP address, and switch names. Further documentation is pending
-
+This repository is forked from kakopappa's original "esp8266-alexa-multiple-wemo-switch" repository. I've customized this code to allow for a web-browser based control of each relay through the [ipaddress]/master web page, as well as support for a external on/off switch that can be attached to a pushbutton to manually control each relay. There is also a SPI LCD library integrated, which shows the current IP address, and switch names. 
+Further documentation is pending, this repository currently contains a clone with no changes, code files will be updated 9/7 8pm PST when a stable version has been tested.
 
 -------------------------------------------------------------
 #Arduino Esp8266 Alexa Multiple Belkin wemo switch emulator
