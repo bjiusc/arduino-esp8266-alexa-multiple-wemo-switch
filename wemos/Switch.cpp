@@ -1,8 +1,6 @@
 #include "Switch.h"
 #include "CallbackFunction.h"
-
-
-        
+  
 //<<constructor>>
 Switch::Switch(){
     Serial.println("default constructor called");
@@ -45,7 +43,11 @@ void Switch::startWebServer(){
   server->on("/", [&]() {
     handleRoot();
   });
- 
+
+ //added
+ server->on("/master", [&]() {
+    handleMaster();
+ });
 
   server->on("/setup.xml", [&]() {
     handleSetupXml();
@@ -58,6 +60,14 @@ void Switch::startWebServer(){
   server->on("/eventservice.xml", [&]() {
     handleEventservice();
   });
+
+  //added
+  server->on("/socket1On", [&](){
+    handleSocket1On();
+});
+server->on("/socket1Off", [&](){
+    handleSocket1Off();
+});
 
   //server->onNotFound(handleNotFound);
   server->begin();
@@ -126,6 +136,33 @@ void Switch::handleUpnpControl(){
 
 void Switch::handleRoot(){
   server->send(200, "text/plain", "You should tell Alexa to discover devices");
+}
+
+void Switch::handleMaster(){
+  String webPage = "";
+  webPage += "<center><h1>ESP8266 Amazon Echo integrated IoT system by Brian Ji</h1><p>Socket #1: Lights <a href=\"socket1On\"><button>ON</button></a>&nbsp;<a href=\"socket1Off\"><button>OFF</button></a></p></center>";
+  webPage += "<center><p>Socket #2: Fan <a href=\"socket2On\"><button>ON</button></a>&nbsp;<a href=\"socket2Off\"><button>OFF</button></a></p></center>";
+  server->send(200, "text/html", webPage);
+}
+
+void Switch::handleSocket1On(){
+  String webPage = "";
+  webPage += "<center><h1>ESP8266 Amazon Echo integrated IoT system by Brian Ji</h1><p>Socket #1: Lights <a href=\"socket1On\"><button>ON</button></a>&nbsp;<a href=\"socket1Off\"><button>OFF</button></a></p></center>";
+  webPage += "<center><p>Socket #2: Fan <a href=\"socket2On\"><button>ON</button></a>&nbsp;<a href=\"socket2Off\"><button>OFF</button></a></p></center>";
+  server->send(200, "text/html", webPage);
+  digitalWrite(0, HIGH);
+  Serial.println("Web Request Socket 1 On");
+  //delay(1000);
+}
+
+void Switch::handleSocket1Off(){
+  String webPage = "";
+  webPage += "<center><h1>ESP8266 Amazon Echo integrated IoT system by Brian Ji</h1><p>Socket #1: Lights <a href=\"socket1On\"><button>ON</button></a>&nbsp;<a href=\"socket1Off\"><button>OFF</button></a></p></center>";
+  webPage += "<center><p>Socket #2: Fan <a href=\"socket2On\"><button>ON</button></a>&nbsp;<a href=\"socket2Off\"><button>OFF</button></a></p></center>";
+  server->send(200, "text/html", webPage);
+  digitalWrite(0, LOW);
+  Serial.println("Web Request Socket 1 Off");
+  //delay(1000);
 }
 
 void Switch::handleSetupXml(){
