@@ -24,6 +24,9 @@ private:
         void handleUpnpControl();
         void handleRoot();
         void handleSetupXml();
+        void handleMaster();
+        void handleSocket1On();
+        void handleSocket1Off();
 public:
         Switch();
         Switch(String alexaInvokeName, unsigned int port, CallbackFunction onCallback, CallbackFunction offCallback);
