@@ -17,8 +17,8 @@
 
 //****************CHANGE THESE*******************
 // Enter your Wi-Fi settings
-const char* ssid = "DPS surveillance-5G";
-const char* password = "bombsquad";
+const char* ssid = "SSID_HERE";
+const char* password = "PASSWORD_HERE";
 //declare alexa callwords here
 String switchName = "lights";
 String switchName2 = "fan";
