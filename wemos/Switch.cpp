@@ -25,8 +25,6 @@ Switch::Switch(String alexaInvokeName, unsigned int port, CallbackFunction oncb,
     startWebServer();
 }
 
-
- 
 //<<destructor>>
 Switch::~Switch(){/*nothing to destruct*/}
 
@@ -40,12 +38,12 @@ void Switch::serverLoop(){
 void Switch::startWebServer(){
   server = new ESP8266WebServer(localPort);
 
-  server->on("/", [&]() {
+  server->on("/default", [&]() {
     handleRoot();
   });
 
- //added
- server->on("/master", [&]() {
+ //changed root to show web controls
+ server->on("/", [&]() {
     handleMaster();
  });
 
@@ -150,7 +148,7 @@ void Switch::handleSocket1On(){
   webPage += "<center><h1>ESP8266 Amazon Echo integrated IoT system by Brian Ji</h1><p>Socket #1: Lights <a href=\"socket1On\"><button>ON</button></a>&nbsp;<a href=\"socket1Off\"><button>OFF</button></a></p></center>";
   webPage += "<center><p>Socket #2: Fan <a href=\"socket2On\"><button>ON</button></a>&nbsp;<a href=\"socket2Off\"><button>OFF</button></a></p></center>";
   server->send(200, "text/html", webPage);
-  digitalWrite(0, HIGH);
+  digitalWrite(0, HIGH); //change this to be dynamic
   Serial.println("Web Request Socket 1 On");
   //delay(1000);
 }
