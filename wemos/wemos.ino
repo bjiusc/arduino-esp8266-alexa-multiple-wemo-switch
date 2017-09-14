@@ -5,68 +5,74 @@
 #include "switch.h"
 #include "UpnpBroadcastResponder.h"
 #include "CallbackFunction.h"
-
-//for web service
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
-
-MDNSResponder mdns;
-String webPage = "";
-
 #include <SPI.h>
 #include <Wire.h>
+
+//for lcd
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+
+//****************CHANGE THESE*******************
+// Enter your Wi-Fi settings
+const char* ssid = "DPS surveillance-5G";
+const char* password = "bombsquad";
+//declare alexa callwords here
+String switchName = "lights";
+String switchName2 = "fan";
+//define pins used for relay(s), and override physical switch pin
+#define RELAY_PIN_1 0
+#define RELAY_PIN_2 0
+#define SWITCH 16
 // pin declarations for SPI LCD
-#define OLED_MOSI  13   //D1
-#define OLED_CLK   15   //D0
+#define OLED_MOSI  13 
+#define OLED_CLK   15 
 #define OLED_DC    14
 #define OLED_CS    2
 #define OLED_RESET 12
-Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
-#define SWITCH 16
-int switchState;
+//***********************************************
+
+
+//initialize LCD pins
+Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);  
+
+bool switchOverrideState;
+bool switchOneState;
+bool switchTwoState;
+
+MDNSResponder mdns;
+String webPage = "";
 
 // prototypes
 boolean connectWifi();
 
 //on/off callbacks 
-void lightsOn();
-void lightsOff();
-void fanOn();
-void fanOff();
+void switchOneOn();
+void switchOneOff();
+void switchTwoOn();
+void switchTwoOff();
 
-// Change this before you flash
-const char* ssid = "Lorenzo_2.4";
-const char* password = "";
-
-//used for real time
-String timeDate = "";
-
-//used for time tracking
+//used for time tracking for menu switching
 unsigned long previousMillis = 0;  
 const long interval = 7000; //wait 3 seconds before next update
 bool menuChange = 0;
 
 boolean wifiConnected = false;
-
 UpnpBroadcastResponder upnpBroadcastResponder;
 
-//NOTICE: declare alexa callwords here
-String switchName = "lights";
-String switchName2 = "fan";
-Switch *lights = NULL;  //pin D3, GPIO 
-Switch *fan = NULL;   //pin D2, GPIO 
+//initialize switch pointers
+Switch *switchOne = NULL; 
+Switch *switchTwo = NULL; 
 
 void setup()
 {
-  delay(150);
+  delay(100);
   Serial.begin(9600);
-  pinMode(0, OUTPUT); //relay 
-pinMode(4, OUTPUT); //relay pin
-  //pinMode(14, OUTPUT); //relay pin
-  pinMode(SWITCH, INPUT_PULLUP); //switch pin
+  pinMode(RELAY_PIN_1, OUTPUT);
+  pinMode(RELAY_PIN_2, OUTPUT); 
+  pinMode(SWITCH, INPUT_PULLUP);
    
   // Initialize wifi connection
   wifiConnected = connectWifi();
@@ -74,14 +80,14 @@ pinMode(4, OUTPUT); //relay pin
   if(wifiConnected){
     upnpBroadcastResponder.beginUdpMulticast();
     
-    // Define your switches here. Max 14
+    // Define your switches here with constructors. Max 14 (stable ~10)
     // Format: Alexa invocation name, local port no, on callback, off callback
-    lights = new Switch(switchName, 80, lightsOn, lightsOff);
-    fan = new Switch(switchName2, 81, fanOn, fanOff);
+    switchOne = new Switch(switchName, 80, switchOneOn, switchOneOff);
+    switchTwo = new Switch(switchName2, 81, switchTwoOn, switchTwoOff);
 
-    Serial.println("Adding switches upnp broadcast responder");
-    upnpBroadcastResponder.addDevice(*lights);
-    upnpBroadcastResponder.addDevice(*fan);
+    Serial.println("Adding switches to the UPnP broadcast responder");
+    upnpBroadcastResponder.addDevice(*switchOne);
+    upnpBroadcastResponder.addDevice(*switchTwo);
   }
 
   //initialize display
@@ -92,18 +98,16 @@ pinMode(4, OUTPUT); //relay pin
   display.setTextSize(1);
   display.setTextColor(WHITE);
 
-  //init web server
-
+  //initialize web server
   if (mdns.begin("esp8266", WiFi.localIP())) {
     Serial.println("MDNS responder started");
   }
-
-  //server.begin();
-  Serial.println("All Services Started");
+  Serial.println("All Services Started Successfully");
 }
  
 void loop()
 {
+  //code to toggle between menus
   unsigned long currentMillis = millis();
   unsigned long delta = currentMillis - previousMillis;
   if (delta >= interval) {
@@ -113,11 +117,7 @@ void loop()
     } else {
       menuChange = LOW;
     }
-
   }
-      //printStatus(wifiConnected);
-      switchState = digitalRead(SWITCH);
-      bool lightState = digitalRead(15);
       
 	 if(wifiConnected){
       if (menuChange) {
@@ -127,27 +127,31 @@ void loop()
       printStatus(wifiConnected);
       }
       upnpBroadcastResponder.serverLoop();
-      fan->serverLoop();
-      lights->serverLoop();
-
+      switchOne->serverLoop();
+      switchTwo->serverLoop();
 	 }
 
-    //ext toggle switch
-   if (switchState == 0) {
+   //get relay status and button press status
+      switchOverrideState = digitalRead(SWITCH);
+      switchOneState = digitalRead(RELAY_PIN_1);
+      switchTwoState = digitalRead(RELAY_PIN_2);
+
+    //using button press status, toggle relay for switch 1
+   if (switchOverrideState == 0) {
     delay(20); //debouncing
-    if (lightState) {
-      digitalWrite(0, LOW);
+    if (switchOneState) {
+      digitalWrite(RELAY_PIN_1, LOW); //turn relay off
     }
     else {
-      digitalWrite(0, HIGH);
+      digitalWrite(RELAY_PIN_1, HIGH); //turn relay on
     }
-    delay(2000); //prevent strobe
+    delay(2000); //prevent strobing, will cause on-off-on switching if the button is pressed for more than two seconds
    }
 }
 
-void lightsOn() {
+void switchOneOn() {
     Serial.print("Lights turn on ...");
-    digitalWrite(0, HIGH);
+    digitalWrite(RELAY_PIN_1, HIGH);
 
   display.setTextSize(1);
   display.setTextColor(WHITE);
@@ -158,9 +162,9 @@ void lightsOn() {
 
 }
 
-void lightsOff() {
+void switchOneOff() {
     Serial.print("Lights turn off ...");
-    digitalWrite(0, LOW);
+    digitalWrite(RELAY_PIN_2, LOW);
 
   display.setTextSize(1);
   display.setTextColor(WHITE);
@@ -170,9 +174,9 @@ void lightsOff() {
   delay(1000);
 }
 
-void fanOn() {
+void switchTwoOn() {
   Serial.print("Fan turn on ...");
-  digitalWrite(4, HIGH);
+  digitalWrite(RELAY_PIN_2, HIGH);
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(25,25);
@@ -181,9 +185,9 @@ void fanOn() {
   delay(1000);
 }
 
-void fanOff() {
+void switchTwoOff() {
   Serial.print("Fan turn off ...");
-  digitalWrite(4, LOW);
+  digitalWrite(RELAY_PIN_2, LOW);
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(25,25);
@@ -196,12 +200,10 @@ void fanOff() {
 boolean connectWifi(){
   boolean state = true;
   int i = 0;
-  
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.println("");
   Serial.println("Connecting to WiFi");
-
   // Wait for connection
   Serial.print("Connecting ...");
   while (WiFi.status() != WL_CONNECTED) {
@@ -225,10 +227,10 @@ boolean connectWifi(){
     Serial.println("");
     Serial.println("Connection failed.");
   }
-  
   return state;
 }
 
+//if connected to wifi, show READY
 void printVal(boolean value)
 {
   display.setTextSize(2);
@@ -242,6 +244,7 @@ void printVal(boolean value)
   }
 }
 
+//prints at the top of the LCD the ESP8266's local IP address, can be used for webcontrol
 void printTitle()
 {
   display.clearDisplay();
@@ -252,6 +255,8 @@ void printTitle()
   display.setCursor(30,0);
   display.println(WiFi.localIP());
 }
+
+//Print current temperature
 void printTemp(float value)
 {
   display.setTextSize(1);
@@ -262,6 +267,7 @@ void printTemp(float value)
   display.println(value);
 }
 
+//uses printVal to print status of wifi connection (may be redundant)
 void printStatus(boolean value)
 {
       printTitle();
@@ -270,6 +276,7 @@ void printStatus(boolean value)
       display.display();
 }
 
+//alt menu showing configuration settings
 void printAltStatus()
 {
 //title
@@ -287,11 +294,11 @@ void printAltStatus()
   display.setCursor(0,10);
   display.println("1:");
   display.setCursor(20,10);
-  display.println(lights->getAlexaInvokeName());
+  display.println(switchOne->getAlexaInvokeName());
   display.setCursor(0,20);
   display.println("2:");
   display.setCursor(20,20);
-  display.println(fan->getAlexaInvokeName());
+  display.println(switchTwo->getAlexaInvokeName());
 //display
   display.display();
 }
